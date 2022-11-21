@@ -52,10 +52,9 @@ if len(sys.argv) != 2:
     print('Usage: rpsServer_header.py port')
     sys.exit(1)
 
+
 # Returns a list of length 2. The first is the result for client 1, and the
 # second for client 2. Again, not very elegant, but it'll do.
-
-
 def RPS(client1RPS, client2RPS):
 
     draw = "It's a draw!"
@@ -82,6 +81,7 @@ def RPS(client1RPS, client2RPS):
     return [draw, draw]
 
 
+# Converts a letter to a full word to make an easy-to-read string for the user
 def convertToWord(letter):
     if letter == 'r':
         return 'rock'
