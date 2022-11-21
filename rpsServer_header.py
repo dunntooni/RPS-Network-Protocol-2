@@ -48,8 +48,6 @@
 import sys
 from socket import *
 
-DEFAULT_VALUE = 6789
-
 if len(sys.argv) != 2:
     print('Usage: rpsServer_header.py port')
     sys.exit(1)
