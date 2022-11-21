@@ -12,24 +12,29 @@
 #
 # RPS (rock/paper/scissors) Protocol Description
 # ----------------------------------------------
-# client 1 <<--TCP connection-->>  server
+# client 1 --Connection Request-->>  server
 #
-#          server <<---TCP connection-->> client 2
+#          server <<---Connection Request-- client 2
 #
-# client 1  --sends player 1 data (r, p, s, or q)-->> server
+# client 1 <<--- OK -- server --OK-->> client 2
 #
-#          server <<-- sends player 2 data (r, p, s, or q) ---- client 2
+# client 1  --sends player 1 data (r, p, or s)-->> server
+#
+#          server <<-- sends player 2 data (r, p, or s) ---- client 2
 #
 # client 1  <<--sends player 1 results (win, lose, or draw)-- server
 #
 #          server --sends player 2 results (win, lose, or draw)-->> client 2
 #
-# Client side commands/communication sent: 'r', 'p', 's', or 'q'
+# Client side commands/communication sent: 'r', 'p', or 's'
 # Server side commands/communication sent:
 # "You chose (answer) and your opponent chose (answer). " + (one of the following:)
 #    "It's a draw!"
 #    "You lose. Better luck next time!"
 #    "You Win!! Congratulations!"
+#
+# When one player disconnects, the program notifies the other player,
+# closes both connections, and then terminates.
 #############################################################################
 #
 # Changes made to my code for the Lab 3 Take-2:
@@ -79,6 +84,15 @@ def RPS(client1RPS, client2RPS):
     return [draw, draw]
 
 
+def convertToWord(letter):
+    if letter == 'r':
+        return 'rock'
+    elif letter == 'p':
+        return 'paper'
+    else:
+        return 'scissors'
+
+
 serverPort = int(sys.argv[1])
 serverSocket = socket(AF_INET, SOCK_STREAM)
 serverSocket.bind(('', serverPort))
@@ -90,31 +104,22 @@ try:
     print('Server waiting for two clients to connect ...')  # Get first client
     connectionSocket, addr = serverSocket.accept()
     req1 = connectionSocket.recv(1024).decode()
-
-    if req1 != "CON":
-        print("ERROR: Data sent from client is bad. Value rps1: ", req1)
-        response = "ERR"
-    else:
-        response = "ACK"
-
-    connectionSocket.send(response.encode())
+    response1 = "OK"
 except:
-    print("Error interacting with client 1")
+    print("Error receiving from client 1")
+    response1 = "ERR"
 
 try:
     print("Server waiting for another client to connect ...")  # Get second client
     connectionSocket2, addr2 = serverSocket.accept()
     req2 = connectionSocket2.recv(1024).decode()
-
-    if req2 != "CON":
-        print("ERROR: Data sent from client is bad. Value rps2: ", req2)
-        response2 = "ERR"
-    else:
-        response2 = "ACK"
-
-    connectionSocket2.send(response2.encode())
+    response2 = "OK"
 except:
-    print("Error interacting with client 2")
+    print("Error receiving from client 2")
+    response2 = "ERR"
+
+connectionSocket.send(response1.encode())
+connectionSocket2.send(response2.encode())
 
 
 # Now, using existing connections, begin gameplay loop. Terminate when
@@ -123,28 +128,41 @@ except:
 while True:
     try:
         rps1 = connectionSocket.recv(1024).decode('ascii')
-        print("Received from client1: ", rps1)
-        # Check if they want to quit
-        if rps1 == 'q':
-            connectionSocket.close()
+        print("Received from client1:", rps1)
 
         rps2 = connectionSocket2.recv(1024).decode('ascii')
-        print("Received from client2: ", rps2)
-        # Check if they want to quit
-        if rps2 == 'q':
-            connectionSocket2.close()
-            print("Server shutting down...")
-            break
+        print("Received from client2:", rps2)
 
+        # Check if a player has disconnected
+        if rps1 == "":
+            raise Exception("1")
+        if rps2 == "":
+            raise Exception("2")
+
+        rps1word = convertToWord(rps1)
+        rps2word = convertToWord(rps2)
         # Set and return responses
         results = RPS(rps1, rps2)
-        res1 = "You chose "+rps1 + \
-            " and your opponent chose "+rps2+". "+results[0]
-        res2 = "You chose "+rps2 + \
-            " and your opponent chose "+rps1+". "+results[1]
+        res1 = "You chose "+rps1word + \
+            ", and your opponent chose "+rps2word+". "+results[0]
+        res2 = "You chose "+rps2word + \
+            ", and your opponent chose "+rps1word+". "+results[1]
         connectionSocket.send(res1.encode('ascii'))
         connectionSocket2.send(res2.encode('ascii'))
 
     except KeyboardInterrupt:
         print("\nClosing Server")
         serverSocket.close()
+
+    except Exception as e:
+        print("Player " + str(e) + " has disconnected. Notifying other player.")
+        if int(str(e)) == 2:
+            connectionSocket.send(
+                'ERR'.encode('ascii'))
+        else:
+            connectionSocket2.send(
+                'ERR'.encode('ascii'))
+
+        connectionSocket.close()
+        connectionSocket2.close()
+        sys.exit(11)

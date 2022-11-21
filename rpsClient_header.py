@@ -9,11 +9,6 @@
 # representing rock, paper, or scissors, and receives a victory, defeat or
 # draw message. It takes a header and a port number as program arguments.
 #############################################################################
-#
-# Changes made to my code for the Lab 3 Take-2:
-#   I spaced out my code for increased readability. Added a few comments.
-#
-#############################################################################
 
 import sys
 from socket import *
@@ -31,9 +26,10 @@ try:
 
     # Do an initial connect. This isn't necessary, but makes sense in my head.
     clientSocket.send("CON".encode('ascii'))
-    if clientSocket.recv(1024).decode('ascii') != "ACK":
+    print("Waiting for a another player to connect...")
+    if clientSocket.recv(1024).decode('ascii') != "OK":
         raise Exception("The server didn't acknowledge the request.")
-
+    print("Connection established!")
     # Get user input. There's probably a more elegant way to do this than
     # doing it twice. Too bad!
     rps = "lol"
@@ -47,14 +43,16 @@ try:
 
         # Wait for response
         response = clientSocket.recv(1024).decode('ascii')
+        if response == 'ERR':
+            print('The other player has disconnected.')
+            break
         print(response)
         rps = "lol"
         while not rps in ['r', 'p', 's', 'q']:
             rps = input('Input (r)ock, (p)aper, (s)cissors, or (q)uit: ')
 
     # Gameplay loop is complete. Send quit message and exit.
-    print("Terminating program. Thanks for playing.")
-    clientSocket.send('q'.encode('ascii'))
+    print("Thanks for playing!")
     clientSocket.close()
     sys.exit(2)
 
